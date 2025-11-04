@@ -1,12 +1,12 @@
 from flask import Flask
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 
 @app.route('/')
 def index():
     return "<h1>This is the home page</h1>"
 
-@app.route('/login')
+@app.route('/login',)
 def login():
     return "<h1>This is the Spotify login page</h1>"
 
