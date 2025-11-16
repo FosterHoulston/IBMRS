@@ -32,6 +32,7 @@ class LlamaClient:
             ])
         return response['message']['content']
     
+    
     def generate_playlist_values(self, keywords):
         response = chat(model=self.model, messages=[
             {
@@ -40,15 +41,19 @@ class LlamaClient:
             },
             {
                 'role':'user', 
-                'content': f'Take these values that represent danceability, energy, liveness, loudness, and valence and provide a list of 20 songs that match these values. Display their score for danceability,energy,liveness, loudness, and valence: {keywords}'
+                'content': f'Take these descriptive words and generate a set of 4 values between 0 and 1 with a precision of 2. These values will represent danceability, energy, liveness, and valence. Also generate a suggested tempo. Provide the values and nothing else: {keywords}'
             },
+            {
+                'role':'assistant',
+                'content':'Format your response as a JSON object with the following structure: {"danceability": float, "energy": float, "liveness": float, "valence": float, "tempo": integer'
+            }
             ])
         return response['message']['content']
     
 def main():
     client = LlamaClient()
     # Example usage of LlamaClient
-    img_prompt = "../testImages/SunnyBeach.jpeg"
+    img_prompt = "testImages/SunnyBeach.jpeg"
     print("Generating description for image...")
     description = client.generate_img_response(img_prompt)
     print("Image Description:", description)
@@ -57,6 +62,6 @@ def main():
     print("Keywords:", keywords)
     print("Generating playlist values from keywords...")
     playlist_values = client.generate_playlist_values(keywords)
-    print("Image Description:", playlist_values)  
+    print("Image Description:\n", playlist_values)  
 
 main()
