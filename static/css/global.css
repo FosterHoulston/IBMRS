@@ -1,0 +1,122 @@
+/* ---------- Reset / Baseline ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: system-ui; /* change/add to later */
+  line-height: 1.5;
+  background: var(--bg-primary, linear-gradient(90deg, hsla(339, 100%, 55%, 1) 0%, hsla(197, 100%, 64%, 1) 100%));
+  color: var(--color-text, #191414ff);
+  overflow: hidden;
+}
+
+/* Remove link underline and color */
+a {
+  color: var(--color-text, #191414ff); /* change */
+  text-decoration: none;
+}
+a:hover,
+a:focus-visible {
+  text-decoration: none;
+  color: var(--color-accent-secondary, #ff1b6bff);
+}
+
+/* Format media */
+img,
+svg,
+canvas,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---------- Design Tokens ---------- */
+:root {
+  --bg-primary: linear-gradient(90deg, hsla(339, 100%, 55%, 1) 0%, hsla(197, 100%, 64%, 1) 100%);
+  --bg-secondary: #f6f7ebff;
+
+  --color-text: #191414ff;
+
+  --color-accent-primary: #45caffff;
+  --color-accent-secondary: #ff1b6bff;
+
+  --color-spotify: #1db954ff;
+}
+/* ------- Design Tokens (END) -------- */
+
+/* ------------ Custom Containers ----------------- */
+.index-outer-ctr {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.index-inner-ctr {
+  height: 500px;
+  width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.playlists-grid-ctr {
+  display: grid;
+  grid-template-columns: 1fr 640px 1fr;
+  height: 100vh;
+}
+
+.playlists-side {
+  position: relative;
+}
+
+.playlists-center {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.playlists-center-content {
+  padding: 60px 10px 10px;
+}
+
+.playlists-header-bar {
+  position: fixed;
+  top: 0;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.playlists-add-btn-ctr {
+  left: 0;
+  width: calc((100vw - 640px) / 2);
+}
+
+.playlists-username-ctr {
+  right: 0;
+  width: calc((100vw - 640px) / 2);
+}
+
+.
+/* --------- Custom Containers (END) ------------- */
+
+/* ---------- Custom Components --------------- */
+.index-btn {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--color-text);
+  background: var(--color-spotify);
+  width: 200px;
+  height: 50px;
+  border-radius: 50px;
+}
+/* -------- Custom Components (END) ----------- */
