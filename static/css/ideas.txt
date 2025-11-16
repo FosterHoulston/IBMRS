@@ -1,0 +1,66 @@
+/***************** background gradient ****************************/
+
+background: hsla(339, 100%, 55%, 1);
+
+background: linear-gradient(90deg, hsla(339, 100%, 55%, 1) 0%, hsla(197, 100%, 64%, 1) 100%);
+
+background: -moz-linear-gradient(90deg, hsla(339, 100%, 55%, 1) 0%, hsla(197, 100%, 64%, 1) 100%);
+
+background: -webkit-linear-gradient(90deg, hsla(339, 100%, 55%, 1) 0%, hsla(197, 100%, 64%, 1) 100%);
+
+filter: progid: DXImageTransform.Microsoft.gradient( startColorstr="#FF1B6B", endColorstr="#45CAFF", GradientType=1 );
+
+/*************** background gradient (END) ************************/
+
+
+
+/***************** Full Color Pallet ****************************/
+
+/* CSS HEX */
+--rose: #ff1b6bff;
+--vivid-sky-blue: #45caffff;
+--licorice: #191414ff;
+--dark-pastel-green: #1db954ff;
+--ivory: #f6f7ebff;
+
+/* CSS HSL */
+--rose: hsla(339, 100%, 55%, 1);
+--vivid-sky-blue: hsla(197, 100%, 64%, 1);
+--licorice: hsla(0, 11%, 9%, 1);
+--dark-pastel-green: hsla(141, 73%, 42%, 1);
+--ivory: hsla(65, 43%, 95%, 1);
+
+/* SCSS HEX */
+$rose: #ff1b6bff;
+$vivid-sky-blue: #45caffff;
+$licorice: #191414ff;
+$dark-pastel-green: #1db954ff;
+$ivory: #f6f7ebff;
+
+/* SCSS HSL */
+$rose: hsla(339, 100%, 55%, 1);
+$vivid-sky-blue: hsla(197, 100%, 64%, 1);
+$licorice: hsla(0, 11%, 9%, 1);
+$dark-pastel-green: hsla(141, 73%, 42%, 1);
+$ivory: hsla(65, 43%, 95%, 1);
+
+/* SCSS RGB */
+$rose: rgba(255, 27, 107, 1);
+$vivid-sky-blue: rgba(69, 202, 255, 1);
+$licorice: rgba(25, 20, 20, 1);
+$dark-pastel-green: rgba(29, 185, 84, 1);
+$ivory: rgba(246, 247, 235, 1);
+
+/* SCSS Gradient */
+$gradient-top: linear-gradient(0deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-right: linear-gradient(90deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-bottom: linear-gradient(180deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-left: linear-gradient(270deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-top-right: linear-gradient(45deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-bottom-right: linear-gradient(135deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-top-left: linear-gradient(225deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-bottom-left: linear-gradient(315deg, #ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+$gradient-radial: radial-gradient(#ff1b6bff, #45caffff, #191414ff, #1db954ff, #f6f7ebff);
+
+
+/***************** Full Color Pallet (END) ************************/
