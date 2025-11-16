@@ -1,2 +1,2 @@
 [console_scripts]
-start-chat = app:main
+start-server = app:main

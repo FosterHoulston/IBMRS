@@ -1,3 +1,12 @@
 .venv/
 .env
 .DS_Store
+chromadb_db/
+/chroma/spotify_songs.csv
+/chroma/spotify_embeddings.npy
+/chroma/spotify_ids.json
+/chroma/spotify_metadata.json
+__pycache__/
+*.pyc
+.idea/
+.vscode/

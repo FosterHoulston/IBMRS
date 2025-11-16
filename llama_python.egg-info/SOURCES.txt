@@ -1,7 +1,5 @@
 LICENSE
 README.md
-app.py
-llama.py
 pyproject.toml
 llama_python.egg-info/PKG-INFO
 llama_python.egg-info/SOURCES.txt
