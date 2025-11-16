@@ -12,9 +12,9 @@ class LlamaClient:
                 'content': 'You are a photography expert. Think step by step and analyze photos looking at perspective, lighting, content, and focus to answer questions.'
             },
             {
-                'role':'user', 
+                'role':'user',
                 'content': 'Describe the content, emomtion, and general vibe of this photo using words that could also be used to describe music. Take that description and condense it down to 10-15 words about the mood vibe and location',
-                'images': img_prompt
+                'images': [img_prompt] if isinstance(img_prompt, str) else img_prompt
             },
             ])
         return response['message']['content']
@@ -40,7 +40,23 @@ class LlamaClient:
             },
             {
                 'role':'user', 
-                'content': f'Take these values that represent danceability, energy, liveness, loudness, and valence and provide a list of 50 songs that match these values. Display their score for danceability,energy,liveness, loudness, and valence: {keywords}'
+                'content': f'Take these values that represent danceability, energy, liveness, loudness, and valence and provide a list of 20 songs that match these values. Display their score for danceability,energy,liveness, loudness, and valence: {keywords}'
             },
             ])
         return response['message']['content']
+    
+def main():
+    client = LlamaClient()
+    # Example usage of LlamaClient
+    img_prompt = "../testImages/SunnyBeach.jpeg"
+    print("Generating description for image...")
+    description = client.generate_img_response(img_prompt)
+    print("Image Description:", description)
+    print("Generating keywords from description...")
+    keywords = client.generate_keywords(description)
+    print("Keywords:", keywords)
+    print("Generating playlist values from keywords...")
+    playlist_values = client.generate_playlist_values(keywords)
+    print("Image Description:", playlist_values)  
+
+main()

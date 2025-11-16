@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-start-chat = "app:main"
+start-server = "app:main"
 
 [tool.setuptools]
 py-modules = ["app", "llama"]
