@@ -1,6 +1,7 @@
 .venv/
 .env
 .DS_Store
+../.DS_Store
 chromadb_db/
 /chroma/spotify_songs.csv
 /chroma/spotify_embeddings.npy
