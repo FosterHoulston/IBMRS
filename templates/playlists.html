@@ -11,7 +11,7 @@
           <p class="playlists-subtitle">Your saved mixes and favorite collections</p>
         </div>
         <div class="playlists-toolbar-actions">
-          <button class="icon-btn icon-btn-primary" type="button" aria-label="Create playlist">+</button>
+          <button id="upload-trigger" class="icon-btn icon-btn-primary" type="button" aria-label="Create playlist">+</button>
           <button class="playlists-username" type="button" aria-label="Account menu">
             <span class="playlists-avatar">{{ avatar_initial|upper }}</span>
             <span class="playlists-username-label">{{ user_display_name }}</span>
@@ -128,4 +128,88 @@
       </footer>
     </section>
   </main>
+  <input id="image-upload-input" type="file" accept="image/*" hidden>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const uploadBtn = document.getElementById('upload-trigger');
+    const fileInput = document.getElementById('image-upload-input');
+    const grid = document.querySelector('.playlist-grid');
+
+    function setLoading(isLoading) {
+      if (!uploadBtn) return;
+      uploadBtn.disabled = isLoading;
+      uploadBtn.textContent = isLoading ? '...' : '+';
+    }
+
+    function createCard(data) {
+      const card = document.createElement('a');
+      card.className = 'playlist-card';
+      card.href = '#';
+      card.setAttribute('aria-label', `Open ${data.playlist_name || 'playlist'}`);
+      card.style.setProperty('--playlist-accent', '#1db954');
+
+      const cover = document.createElement('div');
+      cover.className = 'playlist-cover';
+      const chip = document.createElement('span');
+      chip.className = 'playlist-cover-chip';
+      chip.textContent = (data.descriptors || []).slice(0, 3).join(' • ') || 'New mix';
+      cover.appendChild(chip);
+
+      const info = document.createElement('div');
+      info.className = 'playlist-info';
+      const nameEl = document.createElement('h2');
+      nameEl.className = 'playlist-name';
+      nameEl.textContent = data.playlist_name || 'Playlist';
+      const meta = document.createElement('p');
+      meta.className = 'playlist-meta';
+      meta.textContent = `${data.track_count || 0} tracks`;
+
+      info.appendChild(nameEl);
+      info.appendChild(meta);
+
+      card.appendChild(cover);
+      card.appendChild(info);
+      return card;
+    }
+
+    async function uploadImage(file) {
+      const formData = new FormData();
+      formData.append('image', file);
+      const response = await fetch('/api/playlists/from-image', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const message = err.error || 'Failed to create playlist.';
+        throw new Error(message);
+      }
+      return response.json();
+    }
+
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', async () => {
+        if (!fileInput.files || !fileInput.files.length) return;
+        const file = fileInput.files[0];
+        setLoading(true);
+        try {
+          const data = await uploadImage(file);
+          if (grid) {
+            const card = createCard(data);
+            grid.prepend(card);
+          }
+        } catch (err) {
+          alert(err.message || 'Could not create playlist.');
+        } finally {
+          setLoading(false);
+          fileInput.value = '';
+        }
+      });
+    }
+  })();
+</script>
 {% endblock %}

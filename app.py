@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, redirect, render_template, request, session, url_for, jsonify
 
 app = Flask(__name__, template_folder="templates", static_folder="static", static_url_path="/")
 
@@ -62,6 +62,102 @@ def _fetch_spotify_profile(access_token: str) -> Optional[dict]:
     }
   return None
 
+
+def _ensure_access_token() -> Optional[str]:
+  """Return a valid access token, refreshing with the stored refresh_token if expired."""
+  token = session.get("spotify_token")
+  if not token:
+    return None
+
+  now = time.time()
+  if token.get("expires_at") and token["expires_at"] - now > 60:
+    return token.get("access_token")
+
+  refresh_token = token.get("refresh_token")
+  if not refresh_token:
+    return token.get("access_token")
+
+  data = {
+      "grant_type": "refresh_token",
+      "refresh_token": refresh_token,
+      "client_id": SPOTIFY_CLIENT_ID,
+  }
+  headers = {"Content-Type": "application/x-www-form-urlencoded"}
+  resp = requests.post(SPOTIFY_TOKEN_URL, data=data, headers=headers, timeout=10)
+  if resp.status_code != 200:
+    return token.get("access_token")
+
+  refreshed = resp.json()
+  # Spotify may not return a new refresh token; reuse the existing one.
+  if "refresh_token" not in refreshed:
+    refreshed["refresh_token"] = refresh_token
+  _store_token(refreshed)
+  return refreshed.get("access_token")
+
+
+def _mock_pipeline_from_image(_image_file) -> dict:
+  """Placeholder pipeline call. Replace with real integration when available."""
+  # This uses fixed data while the real AI pipeline is being wired up.
+  return {
+      "playlist_name": "Neon Skyline",
+      "descriptors": ["moody", "city", "night"],
+      "songs": [
+          {"name": "Blinding Lights", "artist": "The Weeknd"},
+          {"name": "Midnight City", "artist": "M83"},
+          {"name": "Electric Feel", "artist": "MGMT"},
+          {"name": "Lose Yourself to Dance", "artist": "Daft Punk"},
+          {"name": "The Less I Know The Better", "artist": "Tame Impala"},
+      ],
+  }
+
+
+def _spotify_headers(access_token: str) -> dict:
+  return {"Authorization": f"Bearer {access_token}"}
+
+
+def _resolve_track_uri(access_token: str, name: str, artist: Optional[str] = None) -> Optional[str]:
+  q = name
+  if artist:
+    q = f"{name} artist:{artist}"
+  params = {"q": q, "type": "track", "limit": 1}
+  resp = requests.get(
+      f"{SPOTIFY_API_BASE}/search",
+      headers=_spotify_headers(access_token),
+      params=params,
+      timeout=10,
+  )
+  if resp.status_code != 200:
+    return None
+  items = resp.json().get("tracks", {}).get("items", [])
+  if not items:
+    return None
+  return items[0].get("uri")
+
+
+def _create_spotify_playlist(access_token: str, user_id: str, name: str, description: str = "") -> Optional[str]:
+  payload = {"name": name, "description": description, "public": False}
+  resp = requests.post(
+      f"{SPOTIFY_API_BASE}/users/{user_id}/playlists",
+      headers={**_spotify_headers(access_token), "Content-Type": "application/json"},
+      json=payload,
+      timeout=10,
+  )
+  if resp.status_code not in (200, 201):
+    return None
+  return resp.json().get("id")
+
+
+def _add_tracks_to_playlist(access_token: str, playlist_id: str, uris: list[str]) -> bool:
+  if not uris:
+    return True
+  resp = requests.post(
+      f"{SPOTIFY_API_BASE}/playlists/{playlist_id}/tracks",
+      headers={**_spotify_headers(access_token), "Content-Type": "application/json"},
+      json={"uris": uris},
+      timeout=10,
+  )
+  return resp.status_code in (200, 201)
+
 @app.context_processor
 def inject_spotify_profile():
   return {"spotify_profile": session.get("spotify_profile")}
@@ -83,6 +179,67 @@ def index():
 @app.route("/playlists")
 def playlists():
   return render_template("playlists.html")
+
+
+@app.route("/api/playlists/from-image", methods=["POST"])
+def create_playlist_from_image():
+  access_token = _ensure_access_token()
+  profile = session.get("spotify_profile")
+  if not access_token or not profile:
+    return jsonify({"error": "Not authenticated with Spotify."}), 401
+
+  image_file = request.files.get("image")
+  if not image_file:
+    return jsonify({"error": "Image file is required."}), 400
+
+  # Call the (stubbed) AI pipeline.
+  pipeline_result = _mock_pipeline_from_image(image_file)
+  playlist_name = pipeline_result.get("playlist_name") or "IBMRS Playlist"
+  descriptors = pipeline_result.get("descriptors") or []
+  songs = pipeline_result.get("songs") or []
+
+  # Create the playlist on Spotify.
+  playlist_description = (
+      "Created by IBMRS from an uploaded image. Descriptors: " + ", ".join(descriptors)
+      if descriptors
+      else "Created by IBMRS from an uploaded image."
+  )
+  playlist_id = _create_spotify_playlist(
+      access_token=access_token,
+      user_id=profile.get("id"),
+      name=playlist_name,
+      description=playlist_description,
+  )
+  if not playlist_id:
+    return jsonify({"error": "Failed to create playlist on Spotify."}), 502
+
+  # Resolve song URIs and add them.
+  track_uris = []
+  resolved_tracks = []
+  for song in songs[:5]:
+    name = song.get("name") if isinstance(song, dict) else None
+    artist = song.get("artist") if isinstance(song, dict) else None
+    if not name:
+      continue
+    uri = _resolve_track_uri(access_token, name=name, artist=artist)
+    if uri:
+      track_uris.append(uri)
+      resolved_tracks.append({"name": name, "artist": artist, "uri": uri})
+
+  if track_uris:
+    added = _add_tracks_to_playlist(access_token, playlist_id, track_uris)
+    if not added:
+      return jsonify({"error": "Playlist created, but adding tracks failed."}), 502
+
+  return jsonify(
+      {
+          "playlist_id": playlist_id,
+          "playlist_name": playlist_name,
+          "descriptors": descriptors,
+          "tracks": resolved_tracks,
+          "track_count": len(track_uris),
+      }
+  )
 
 
 @app.route("/auth/login")
