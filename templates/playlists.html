@@ -1,6 +1,131 @@
 {% extends "Base.html" %}
-{% block title %}Playlists page{% endblock %}
+{% block title %}Playlists{% endblock %}
 {% block content %}
-  <div class="playlists-grid-ctr">
-  </div>
+  <main class="page playlists-page">
+    <section class="playlists-content" aria-labelledby="playlists-heading">
+      {% set user_display_name = spotify_profile.display_name if spotify_profile and spotify_profile.display_name else "Guest" %}
+      {% set avatar_initial = user_display_name[0] if user_display_name else "?" %}
+      <header class="playlists-toolbar">
+        <div class="playlists-title-group">
+          <h1 id="playlists-heading" class="playlists-title">Playlists</h1>
+          <p class="playlists-subtitle">Your saved mixes and favorite collections</p>
+        </div>
+        <div class="playlists-toolbar-actions">
+          <button class="icon-btn icon-btn-primary" type="button" aria-label="Create playlist">+</button>
+          <button class="playlists-username" type="button" aria-label="Account menu">
+            <span class="playlists-avatar">{{ avatar_initial|upper }}</span>
+            <span class="playlists-username-label">{{ user_display_name }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="playlist-grid">
+        <a class="playlist-card" href="#" style="--playlist-accent: #ff477e;" aria-label="Open Rooftop Neon">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Rooftop dusk.jpg</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">Rooftop Neon</h2>
+            <p class="playlist-meta">warm • nostalgic • chillwave • 22 tracks</p>
+          </div>
+        </a>
+
+        <a class="playlist-card" href="#" style="--playlist-accent: #45caff;" aria-label="Open Morning Flow">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Morning flow.png</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">Morning Flow</h2>
+            <p class="playlist-meta">soft light • slow coffee • 18 tracks</p>
+          </div>
+        </a>
+
+        <a class="playlist-card" href="#" style="--playlist-accent: #1db954;" aria-label="Open Forest Drift">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Forest path.heic</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">Forest Drift</h2>
+            <p class="playlist-meta">misty • organic • ambient • 27 tracks</p>
+          </div>
+        </a>
+
+        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a new playlist from photo">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Drop a new photo</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">New playlist</h2>
+            <p class="playlist-meta">Turn your next picture into a mix.</p>
+          </div>
+        </a>
+
+        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a weekend playlist from photo">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Weekend plans.png</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">Weekend Mix</h2>
+            <p class="playlist-meta">Bright, high-energy tracks from your snapshots.</p>
+          </div>
+        </a>
+
+        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a late-night playlist from photo">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Late-night city.jpg</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">City Lights</h2>
+            <p class="playlist-meta">Dim, late-night sounds for neon photos.</p>
+          </div>
+        </a>
+
+        <a class="playlist-card" href="#" style="--playlist-accent: #1db954;" aria-label="Open Forest Drift">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Forest path.heic</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">Forest Drift</h2>
+            <p class="playlist-meta">misty • organic • ambient • 27 tracks</p>
+          </div>
+        </a>
+
+        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a new playlist from photo">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Drop a new photo</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">New playlist</h2>
+            <p class="playlist-meta">Turn your next picture into a mix.</p>
+          </div>
+        </a>
+
+        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a weekend playlist from photo">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Weekend plans.png</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">Weekend Mix</h2>
+            <p class="playlist-meta">Bright, high-energy tracks from your snapshots.</p>
+          </div>
+        </a>
+
+        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a late-night playlist from photo">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Late-night city.jpg</span>
+          </div>
+          <div class="playlist-info">
+            <h2 class="playlist-name">City Lights</h2>
+            <p class="playlist-meta">Dim, late-night sounds for neon photos.</p>
+          </div>
+        </a>
+
+      </div>
+
+      <footer class="playlists-footer-hint" aria-hidden="true">
+        <span class="playlists-footer-gradient"></span>
+        <span class="playlists-footer-text">Scroll for more playlists</span>
+      </footer>
+    </section>
+  </main>
 {% endblock %}

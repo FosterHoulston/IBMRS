@@ -1,10 +1,35 @@
 {% extends "Base.html" %}
-{% block title%}Flask App Entry Page{% endblock %}
+{% block title %}Get Started{% endblock %}
 {% block content %}
-  <div class="index-outer-ctr">
-    <div class="index-inner-ctr">
-      <h1>Let's Get Started</h1>
-      <button class="index-btn">Login To Spotify</button>
-    </div>
-  </div>
+  <main class="page intro-page intro-page--minimal">
+    <section class="intro-minimal fade-in">
+      <div class="intro-minimal-copy">
+        <p class="intro-eyebrow">Photo → playlist</p>
+        <h1 class="intro-title">Soundtrack the vibe.</h1>
+        <p class="intro-copy">
+          Drop a photo, let IBMRS sense the mood, and we’ll save a matching Spotify playlist using
+          your image as the cover.
+        </p>
+
+        <div class="intro-actions">
+          <a class="btn btn-spotify" href="{{ url_for('spotify_login') }}">Connect Spotify</a>
+          <button class="btn btn-secondary" type="button">Upload a photo</button>
+        </div>
+
+        <p class="intro-note">You stay in control. Disconnect Spotify anytime.</p>
+      </div>
+
+      <div class="intro-minimal-preview">
+        <div class="playlist-card playlist-card--preview" style="--playlist-accent: #ff477e;">
+          <div class="playlist-cover">
+            <span class="playlist-cover-chip">Rooftop dusk.jpg</span>
+          </div>
+          <div class="playlist-info">
+            <p class="playlist-name">Rooftop Neon</p>
+            <p class="playlist-meta">warm • nostalgic • chillwave • 22 tracks</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 {% endblock %}
