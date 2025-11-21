@@ -6,6 +6,8 @@ import numpy as np
 import json
 import os
 
+
+# Createds a ChromaDB persistent client, embeds spotify songs from CSV, and stores them in ChromaDB
 def initialize_chroma_db():
     # Load CSV
     spotify_data = "chroma/spotify_songs.csv"

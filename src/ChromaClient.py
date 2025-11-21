@@ -6,7 +6,10 @@ from sentence_transformers import SentenceTransformer
 # Load the same embedding model used during initialization
 embed_model = SentenceTransformer("all-mpnet-base-v2")
 
-
+# Query function to get playlist from ChromaDB
+# @param query_text: The text input to be embedded and queried
+# @param top_k: Number of top results to return
+# @return: List of songs with their metadata
 def query_chroma(query_text, top_k=5):
     # Use the same persistent client path as chromaInit.py
     db_path = os.path.join(os.path.dirname(__file__), "..", "chromadb_db")

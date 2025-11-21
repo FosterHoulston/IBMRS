@@ -7,6 +7,9 @@ class LlamaClient:
     def __init__(self, model=OLLAMA_MODEL):
         self.model = model
 
+    # Generate image description response
+    # @param img_prompt: The image input (file path or image data)
+    # @return: Description text of the image
     def generate_img_response(self, img_prompt):
         response = chat(model=self.model, messages=[
             {
@@ -21,6 +24,9 @@ class LlamaClient:
             ])
         return response['message']['content']
     
+    # Generate keywords from text prompt
+    # @param text_prompt: The text input to extract keywords from
+    # @return: Keywords string
     def generate_keywords(self, text_prompt):
         response = chat(model=self.model, messages=[
             {
@@ -34,7 +40,9 @@ class LlamaClient:
             ])
         return response['message']['content']
     
-    
+    # Generate playlist values from keywords
+    # @param keywords: The keywords input to generate playlist values from
+    # @return: JSON string with playlist values
     def generate_playlist_values(self, keywords):
         response = chat(model=self.model, messages=[
             {
@@ -54,7 +62,7 @@ class LlamaClient:
     
     
     
-    
+# Test pipeline
 def main():
     client = LlamaClient()
     # Example usage of LlamaClient
