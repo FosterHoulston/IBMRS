@@ -1,5 +1,7 @@
 from ollama import chat
 from config import OLLAMA_MODEL
+from ChromaClient import query_chroma
+import json
 
 class LlamaClient:
     def __init__(self, model=OLLAMA_MODEL):
@@ -13,7 +15,7 @@ class LlamaClient:
             },
             {
                 'role':'user',
-                'content': 'Describe the content, emomtion, and general vibe of this photo using words that could also be used to describe music. Take that description and condense it down to 10-15 words about the mood vibe and location',
+                'content': 'Describe the content, emomtion, and general vibe of this photo using words that could also be used to describe music: Be detailed but brief.',
                 'images': [img_prompt] if isinstance(img_prompt, str) else img_prompt
             },
             ])
@@ -41,14 +43,17 @@ class LlamaClient:
             },
             {
                 'role':'user', 
-                'content': f'Take these descriptive words and generate a set of 4 values between 0 and 1 with a precision of 2. These values will represent danceability, energy, liveness, and valence. Also generate a suggested tempo. Provide the values and nothing else: {keywords}'
+                'content': f'Take these descriptive words and generate a set of 4 values between 0 and 1 with a precision of 2. These values will represent danceability, energy, acousticness, liveness, and valence. Also generate a suggested tempo. Provide the values and nothing else: {keywords}'
             },
             {
                 'role':'assistant',
-                'content':'Format your response as a JSON object with the following structure: {"danceability": float, "energy": float, "liveness": float, "valence": float, "tempo": integer'
+                'content':'Format your response as a JSON object with the following structure: {"danceability": float, "energy": float, "acousticness": float, "liveness": float, "valence": float, "tempo": integer'
             }
             ])
         return response['message']['content']
+    
+    
+    
     
 def main():
     client = LlamaClient()
@@ -63,5 +68,8 @@ def main():
     print("Generating playlist values from keywords...")
     playlist_values = client.generate_playlist_values(keywords)
     print("Image Description:\n", playlist_values)  
+    chroma_query =query_chroma(playlist_values,15)
+    format_query = json.dumps(chroma_query, indent=2)
+    print("Chroma Query Results:\n", format_query)
 
 main()
