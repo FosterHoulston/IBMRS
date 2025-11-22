@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: llama-python
+Version: 0.1.0
+Summary: A CLI chatbot using Llama LLM
+Author-email: Your Name <your@email.com>
+License-Expression: MIT
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: ollama==0.4.4
+Requires-Dist: python-dotenv==1.0.0
+Dynamic: license-file
+
+# IBMRS (Image-Based Music Recommendation System)
+Monolithic web app that creates Spotify playlists based on the vibe of an uploaded image.

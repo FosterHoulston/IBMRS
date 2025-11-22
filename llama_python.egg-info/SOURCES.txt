@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+llama_python.egg-info/PKG-INFO
+llama_python.egg-info/SOURCES.txt
+llama_python.egg-info/dependency_links.txt
+llama_python.egg-info/entry_points.txt
+llama_python.egg-info/requires.txt
+llama_python.egg-info/top_level.txt
