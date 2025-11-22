@@ -37,6 +37,10 @@ class LlamaClient:
                 'role':'user', 
                 'content': f'Distill this information down to 10 to 15 key words about the vibe and location. Only give me the 10-15 key words that could also be used to describe music. Do not give any other response: {text_prompt}'
             },
+            {
+                'role':'assistant',
+                'content':'Provide the keywords as a comma-separated list.'
+            }
             ])
         return response['message']['content']
     
@@ -59,25 +63,34 @@ class LlamaClient:
             }
             ])
         return response['message']['content']
-    
-    
-    
-# Test pipeline
-def main():
-    client = LlamaClient()
-    # Example usage of LlamaClient
-    img_prompt = "testImages/SunnyBeach.jpeg"
-    print("Generating description for image...")
-    description = client.generate_img_response(img_prompt)
-    print("Image Description:", description)
-    print("Generating keywords from description...")
-    keywords = client.generate_keywords(description)
-    print("Keywords:", keywords)
-    print("Generating playlist values from keywords...")
-    playlist_values = client.generate_playlist_values(keywords)
-    print("Image Description:\n", playlist_values)  
-    chroma_query =query_chroma(playlist_values,15)
-    format_query = json.dumps(chroma_query, indent=2)
-    print("Chroma Query Results:\n", format_query)
 
-main()
+    # Pipeline method to process image and generate playlist
+    # @param img_prompt: The image input (file path or image data)
+    # @return: Tuple of (playlist results as list of dicts, keywords as list of strings)
+    def pipeline(self, img_prompt):
+        print("Generating description for image...")
+        description = self.generate_img_response(img_prompt)
+        print("Image Description:", description)
+        print("Generating keywords from description...")
+        keywords = self.generate_keywords(description)
+        print("Keywords:", keywords)
+        print("Generating playlist values from keywords...")
+        playlist_values = self.generate_playlist_values(keywords)
+        print("Playlist values:\n", playlist_values)
+        chroma_query = query_chroma(playlist_values, 15)
+        format_query = json.dumps(chroma_query, indent=2)
+        print("Chroma Query Results:\n", format_query)
+
+        # Return the list of songs and keywords as a list
+        # Clean up keywords - remove numbering like "1.", "2.", etc.
+        import re
+        if ',' in keywords:
+            keywords_list = [re.sub(r'^\d+\.\s*', '', k.strip()) for k in keywords.split(',') if k.strip()]
+        else:
+            # Split by whitespace and remove numbers
+            keywords_list = [re.sub(r'^\d+\.\s*', '', k.strip()) for k in keywords.split() if k.strip()]
+
+        # Filter out any remaining empty strings
+        keywords_list = [k for k in keywords_list if k]
+
+        return chroma_query, keywords_list[:3]

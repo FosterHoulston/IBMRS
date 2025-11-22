@@ -5,12 +5,18 @@ import secrets
 import time
 from typing import Optional
 from urllib.parse import urlencode
+from LlamaClient import LlamaClient
 
 import requests
 from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, session, url_for, jsonify
 
-app = Flask(__name__, template_folder="templates", static_folder="static", static_url_path="/")
+# Use absolute paths for template and static folders
+_base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+app = Flask(__name__,
+            template_folder=os.path.join(_base_dir, "templates"),
+            static_folder=os.path.join(_base_dir, "static"),
+            static_url_path="/")
 
 load_dotenv()
 
@@ -143,6 +149,7 @@ def _create_spotify_playlist(access_token: str, user_id: str, name: str, descrip
       timeout=10,
   )
   if resp.status_code not in (200, 201):
+    print(f"Failed to create playlist. Status: {resp.status_code}, Response: {resp.text}")
     return None
   return resp.json().get("id")
 
@@ -192,54 +199,80 @@ def create_playlist_from_image():
   if not image_file:
     return jsonify({"error": "Image file is required."}), 400
 
-  # Call the (stubbed) AI pipeline.
-  pipeline_result = _mock_pipeline_from_image(image_file)
-  playlist_name = pipeline_result.get("playlist_name") or "IBMRS Playlist"
-  descriptors = pipeline_result.get("descriptors") or []
-  songs = pipeline_result.get("songs") or []
+  # Save uploaded image to a temporary file
+  import tempfile
+  with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image_file.filename)[1]) as tmp_file:
+    image_file.save(tmp_file.name)
+    temp_image_path = tmp_file.name
 
-  # Create the playlist on Spotify.
-  playlist_description = (
-      "Created by IBMRS from an uploaded image. Descriptors: " + ", ".join(descriptors)
-      if descriptors
-      else "Created by IBMRS from an uploaded image."
-  )
-  playlist_id = _create_spotify_playlist(
-      access_token=access_token,
-      user_id=profile.get("id"),
-      name=playlist_name,
-      description=playlist_description,
-  )
-  if not playlist_id:
-    return jsonify({"error": "Failed to create playlist on Spotify."}), 502
+  try:
+    llamaClient_instance = LlamaClient()
+    print("LlamaClient instance created")
 
-  # Resolve song URIs and add them.
-  track_uris = []
-  resolved_tracks = []
-  for song in songs[:5]:
-    name = song.get("name") if isinstance(song, dict) else None
-    artist = song.get("artist") if isinstance(song, dict) else None
-    if not name:
-      continue
-    uri = _resolve_track_uri(access_token, name=name, artist=artist)
-    if uri:
-      track_uris.append(uri)
-      resolved_tracks.append({"name": name, "artist": artist, "uri": uri})
+    # Call the AI pipeline with the temporary file path
+    pipeline_result, descriptors = llamaClient_instance.pipeline(temp_image_path)
+    print(f"Pipeline completed. Result type: {type(pipeline_result)}, Descriptors: {descriptors}")
 
-  if track_uris:
-    added = _add_tracks_to_playlist(access_token, playlist_id, track_uris)
-    if not added:
-      return jsonify({"error": "Playlist created, but adding tracks failed."}), 502
+    playlist_name = " ".join(str(d) for d in descriptors) if descriptors else "New Playlist"
+    print(f"Generated playlist name: '{playlist_name}'")
+    print(f"Playlist name length: {len(playlist_name)}")
 
-  return jsonify(
-      {
-          "playlist_id": playlist_id,
-          "playlist_name": playlist_name,
-          "descriptors": descriptors,
-          "tracks": resolved_tracks,
-          "track_count": len(track_uris),
-      }
-  )
+    # Create the playlist on Spotify.
+    playlist_description = (
+        "Created by IBMRS from an uploaded image. Descriptors: " + ", ".join(str(d) for d in descriptors)
+        if descriptors
+        else "Created by IBMRS from an uploaded image."
+    )
+    print(f"Playlist description: {playlist_description}")
+
+    playlist_id = _create_spotify_playlist(
+        access_token=access_token,
+        user_id=profile.get("id"),
+        name=playlist_name,
+        description=playlist_description,
+    )
+    print(f"Playlist created with ID: {playlist_id}")
+
+    if not playlist_id:
+      return jsonify({"error": "Failed to create playlist on Spotify."}), 502
+
+    # Resolve song URIs and add them.
+    track_uris = []
+    resolved_tracks = []
+    for song in pipeline_result:
+      print("Song from pipeline:", song,"Artists:", song.get("artists") if isinstance(song, dict) else None)
+      name = song.get("name") if isinstance(song, dict) else None
+      artists = song.get("artists") if isinstance(song, dict) else None  # Note: plural "artists"
+      if not name:
+        continue
+      uri = _resolve_track_uri(access_token, name=name, artist=artists)
+      if uri:
+        track_uris.append(uri)
+        resolved_tracks.append({"name": name, "artist": artists, "uri": uri})
+
+    if track_uris:
+      added = _add_tracks_to_playlist(access_token, playlist_id, track_uris)
+      if not added:
+        return jsonify({"error": "Playlist created, but adding tracks failed."}), 502
+
+    return jsonify(
+        {
+            "playlist_id": playlist_id,
+            "playlist_name": playlist_name,
+            "descriptors": descriptors,
+            "tracks": resolved_tracks,
+            "track_count": len(track_uris),
+        }
+    )
+  except Exception as e:
+    print(f"Error in create_playlist_from_image: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+  finally:
+    # Clean up the temporary file
+    if os.path.exists(temp_image_path):
+      os.unlink(temp_image_path)
 
 
 @app.route("/auth/login")
