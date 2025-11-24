@@ -213,7 +213,19 @@ def create_playlist_from_image():
     pipeline_result, descriptors = llamaClient_instance.pipeline(temp_image_path)
     print(f"Pipeline completed. Result type: {type(pipeline_result)}, Descriptors: {descriptors}")
 
-    playlist_name = " ".join(str(d) for d in descriptors) if descriptors else "New Playlist"
+    # Generate playlist name with validation
+    if descriptors:
+        playlist_name = " ".join(str(d).strip() for d in descriptors if str(d).strip())
+    else:
+        playlist_name = "New Playlist"
+
+    # Ensure playlist name is not empty and within Spotify's limits (max 100 characters)
+    playlist_name = playlist_name.strip()
+    if not playlist_name:
+        playlist_name = "New Playlist"
+    if len(playlist_name) > 100:
+        playlist_name = playlist_name[:100].strip()
+
     print(f"Generated playlist name: '{playlist_name}'")
     print(f"Playlist name length: {len(playlist_name)}")
 
