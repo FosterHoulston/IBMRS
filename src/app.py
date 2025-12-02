@@ -11,6 +11,12 @@ import requests
 from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, session, url_for, jsonify
 
+# Database imports
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from database.config import SessionLocal, test_connection
+from database.models import User, Playlist, Song, PlaylistSong
+
 # Use absolute paths for template and static folders
 _base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app = Flask(__name__,
@@ -21,6 +27,12 @@ app = Flask(__name__,
 load_dotenv()
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
+
+# Test database connection on startup
+if test_connection():
+    print("✓ Database connected successfully")
+else:
+    print("⚠️  Database connection failed - check your .env settings")
 
 SPOTIFY_CLIENT_ID = os.getenv("CLIENT_ID")
 SPOTIFY_REDIRECT_URI = os.getenv("REDIRECT_URI")
@@ -73,6 +85,7 @@ def _ensure_access_token() -> Optional[str]:
   """Return a valid access token, refreshing with the stored refresh_token if expired."""
   token = session.get("spotify_token")
   if not token:
+    print("⚠️  No Spotify token in session")
     return None
 
   now = time.time()
@@ -81,8 +94,10 @@ def _ensure_access_token() -> Optional[str]:
 
   refresh_token = token.get("refresh_token")
   if not refresh_token:
+    print("⚠️  No refresh token available")
     return token.get("access_token")
 
+  print("🔄 Refreshing access token...")
   data = {
       "grant_type": "refresh_token",
       "refresh_token": refresh_token,
@@ -91,6 +106,7 @@ def _ensure_access_token() -> Optional[str]:
   headers = {"Content-Type": "application/x-www-form-urlencoded"}
   resp = requests.post(SPOTIFY_TOKEN_URL, data=data, headers=headers, timeout=10)
   if resp.status_code != 200:
+    print(f"⚠️  Token refresh failed: {resp.status_code}")
     return token.get("access_token")
 
   refreshed = resp.json()
@@ -98,6 +114,7 @@ def _ensure_access_token() -> Optional[str]:
   if "refresh_token" not in refreshed:
     refreshed["refresh_token"] = refresh_token
   _store_token(refreshed)
+  print("✓ Access token refreshed")
   return refreshed.get("access_token")
 
 
@@ -141,15 +158,30 @@ def _resolve_track_uri(access_token: str, name: str, artist: Optional[str] = Non
 
 
 def _create_spotify_playlist(access_token: str, user_id: str, name: str, description: str = "") -> Optional[str]:
+  # Validate and sanitize playlist name
+  if not name or not name.strip():
+    name = "New Playlist"
+  name = name.strip()[:100]  # Spotify max: 100 characters
+
+  # Validate and sanitize description
+  if description:
+    description = description.strip()[:300]  # Spotify max: 300 characters
+
   payload = {"name": name, "description": description, "public": False}
+
+  print(f"Creating playlist with payload: {payload}")
+
+  # Use /me/playlists instead of /users/{user_id}/playlists (deprecated endpoint)
   resp = requests.post(
-      f"{SPOTIFY_API_BASE}/users/{user_id}/playlists",
+      f"{SPOTIFY_API_BASE}/me/playlists",
       headers={**_spotify_headers(access_token), "Content-Type": "application/json"},
       json=payload,
       timeout=10,
   )
   if resp.status_code not in (200, 201):
     print(f"Failed to create playlist. Status: {resp.status_code}, Response: {resp.text}")
+    print(f"Request headers: {_spotify_headers(access_token)}")
+    print(f"Request payload: {payload}")
     return None
   return resp.json().get("id")
 
@@ -185,7 +217,66 @@ def index():
 
 @app.route("/playlists")
 def playlists():
-  return render_template("playlists.html")
+  """Render playlists page with user's playlists from database"""
+  user_playlists = []
+  user_id = session.get('user_id')
+
+  if user_id:
+    db = SessionLocal()
+    try:
+      user = db.query(User).filter(User.id == user_id).first()
+      if user:
+        # Get all non-deleted playlists with song counts
+        user_playlists = [
+          {
+            'id': p.id,
+            'name': p.name,
+            'description': p.description,
+            'song_count': len([ps for ps in p.playlist_songs if ps.song]),
+            'cover_image': p.cover_image,
+            'created_at': p.created_at.isoformat() if p.created_at else None
+          }
+          for p in user.playlists if not p.deleted_at
+        ]
+        # Sort by most recent first
+        user_playlists.sort(key=lambda x: x['created_at'] or '', reverse=True)
+    finally:
+      db.close()
+
+  return render_template("playlists.html", user_playlists=user_playlists)
+
+
+@app.route("/api/my-playlists")
+def get_my_playlists():
+  """Get user's playlists from database"""
+  user_id = session.get('user_id')
+  if not user_id:
+    return jsonify({"error": "Not authenticated"}), 401
+
+  db = SessionLocal()
+  try:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+      return jsonify({"error": "User not found"}), 404
+
+    playlists = [p.to_dict(include_songs=True) for p in user.playlists if not p.deleted_at]
+    return jsonify({"playlists": playlists, "count": len(playlists)})
+  finally:
+    db.close()
+
+
+@app.route("/api/playlists/<playlist_id>")
+def get_playlist_details(playlist_id):
+  """Get detailed playlist info from database"""
+  db = SessionLocal()
+  try:
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if not playlist:
+      return jsonify({"error": "Playlist not found"}), 404
+
+    return jsonify(playlist.to_dict(include_songs=True))
+  finally:
+    db.close()
 
 
 @app.route("/api/playlists/from-image", methods=["POST"])
@@ -199,11 +290,25 @@ def create_playlist_from_image():
   if not image_file:
     return jsonify({"error": "Image file is required."}), 400
 
-  # Save uploaded image to a temporary file
+  # Save uploaded image to a temporary file for processing
   import tempfile
   with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image_file.filename)[1]) as tmp_file:
     image_file.save(tmp_file.name)
     temp_image_path = tmp_file.name
+
+  # Also save a permanent copy for the playlist cover
+  import uuid as uuid_lib
+  permanent_filename = f"{uuid_lib.uuid4()}{os.path.splitext(image_file.filename)[1]}"
+  permanent_image_dir = os.path.join(_base_dir, "static", "playlist_covers")
+  os.makedirs(permanent_image_dir, exist_ok=True)
+  permanent_image_path = os.path.join(permanent_image_dir, permanent_filename)
+
+  # Copy the temp file to permanent location
+  import shutil
+  shutil.copy2(temp_image_path, permanent_image_path)
+
+  # Store relative path for use in templates
+  cover_image_url = f"/playlist_covers/{permanent_filename}"
 
   try:
     llamaClient_instance = LlamaClient()
@@ -215,7 +320,17 @@ def create_playlist_from_image():
 
     # Generate playlist name with validation
     if descriptors:
+        # Join descriptors and clean up
         playlist_name = " ".join(str(d).strip() for d in descriptors if str(d).strip())
+
+        # Remove newlines and extra whitespace that Spotify doesn't accept
+        playlist_name = " ".join(playlist_name.split())
+
+        # Remove any leading text like "Here are 15 keywords..." and get just the actual keywords
+        if ":" in playlist_name:
+            # Split by colon and take the last part (the actual keywords)
+            parts = playlist_name.split(":")
+            playlist_name = parts[-1].strip()
     else:
         playlist_name = "New Playlist"
 
@@ -230,11 +345,17 @@ def create_playlist_from_image():
     print(f"Playlist name length: {len(playlist_name)}")
 
     # Create the playlist on Spotify.
-    playlist_description = (
-        "Created by IBMRS from an uploaded image. Descriptors: " + ", ".join(str(d) for d in descriptors)
-        if descriptors
-        else "Created by IBMRS from an uploaded image."
-    )
+    if descriptors:
+        # Clean descriptors for description (remove newlines and extra whitespace)
+        clean_descriptors = [" ".join(str(d).split()) for d in descriptors]
+        playlist_description = "Created by IBMRS from an uploaded image. Descriptors: " + ", ".join(clean_descriptors)
+    else:
+        playlist_description = "Created by IBMRS from an uploaded image."
+
+    # Ensure description doesn't exceed Spotify's limit (300 chars)
+    if len(playlist_description) > 300:
+        playlist_description = playlist_description[:297] + "..."
+
     print(f"Playlist description: {playlist_description}")
 
     playlist_id = _create_spotify_playlist(
@@ -266,6 +387,73 @@ def create_playlist_from_image():
       added = _add_tracks_to_playlist(access_token, playlist_id, track_uris)
       if not added:
         return jsonify({"error": "Playlist created, but adding tracks failed."}), 502
+
+    # Save playlist and songs to database
+    db = SessionLocal()
+    try:
+        user_id = session.get('user_id')
+        if user_id:
+            # Create playlist record
+            db_playlist = Playlist(
+                name=playlist_name,
+                description=playlist_description,
+                is_public=False,
+                cover_image=cover_image_url,
+                user_id=user_id
+            )
+            db.add(db_playlist)
+            db.commit()
+
+            # Deduplicate tracks by URI to prevent duplicate playlist entries
+            seen_uris = set()
+            unique_tracks = []
+            for track in resolved_tracks:
+                if track['uri'] not in seen_uris:
+                    seen_uris.add(track['uri'])
+                    unique_tracks.append(track)
+
+            # Add songs to database and link to playlist
+            for idx, track in enumerate(unique_tracks):
+                # Extract Spotify track ID from URI (format: spotify:track:TRACK_ID)
+                spotify_track_id = track['uri'].split(':')[-1] if ':' in track['uri'] else None
+
+                # Check if song exists by Spotify track ID
+                song = None
+                if spotify_track_id:
+                    song = db.query(Song).filter(Song.spotify_track_id == spotify_track_id).first()
+
+                if not song:
+                    # Create new song
+                    song = Song(
+                        spotify_track_id=spotify_track_id,
+                        title=track['name'],
+                        artist=track.get('artist', 'Unknown Artist'),
+                        audio_url=track['uri']
+                    )
+                    db.add(song)
+                    db.commit()
+
+                # Link song to playlist
+                playlist_song = PlaylistSong(
+                    playlist_id=db_playlist.id,
+                    song_id=song.id,
+                    order=idx
+                )
+                db.add(playlist_song)
+
+            db.commit()
+            duplicates_removed = len(resolved_tracks) - len(unique_tracks)
+            if duplicates_removed > 0:
+                print(f"✓ Saved playlist '{playlist_name}' with {len(unique_tracks)} unique songs to database ({duplicates_removed} duplicates removed)")
+            else:
+                print(f"✓ Saved playlist '{playlist_name}' with {len(unique_tracks)} songs to database")
+    except Exception as e:
+        print(f"✗ Error saving playlist to database: {e}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+    finally:
+        db.close()
 
     return jsonify(
         {
@@ -370,6 +558,47 @@ def spotify_callback():
   profile = _fetch_spotify_profile(access_token) if access_token else None
   if profile:
     session["spotify_profile"] = profile
+
+    # Save or update user in database
+    db = SessionLocal()
+    try:
+        # Check if user exists
+        user = db.query(User).filter(User.spotify_id == profile['id']).first()
+
+        if user:
+            # Update existing user
+            user.update_spotify_tokens(
+                access_token=access_token,
+                refresh_token=token_payload.get('refresh_token')
+            )
+            user.email = profile.get('email')
+            user.display_name = profile.get('display_name')
+            user.profile_image = profile['images'][0]['url'] if profile.get('images') else None
+            db.commit()
+            print(f"✓ Updated user: {user.email}")
+        else:
+            # Create new user
+            user = User(
+                spotify_id=profile['id'],
+                email=profile.get('email'),
+                display_name=profile.get('display_name'),
+                profile_image=profile['images'][0]['url'] if profile.get('images') else None,
+                spotify_access_token=access_token,
+                spotify_refresh_token=token_payload.get('refresh_token'),
+                spotify_uri=f"spotify:user:{profile['id']}"
+            )
+            db.add(user)
+            db.commit()
+            print(f"✓ Created new user: {user.email}")
+
+        # Store user ID in session for later use
+        session['user_id'] = user.id
+
+    except Exception as e:
+        print(f"✗ Error saving user to database: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
   return redirect(url_for("playlists"))
 

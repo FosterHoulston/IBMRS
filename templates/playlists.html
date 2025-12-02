@@ -20,103 +20,40 @@
       </header>
 
       <div class="playlist-grid">
-        <a class="playlist-card" href="#" style="--playlist-accent: #ff477e;" aria-label="Open Rooftop Neon">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Rooftop dusk.jpg</span>
+        {% if user_playlists %}
+          {% for playlist in user_playlists %}
+        <a class="playlist-card" href="#" aria-label="Open {{ playlist.name }}" data-playlist-id="{{ playlist.id }}">
+          <div class="playlist-cover" {% if playlist.cover_image %}style="background-image: url('{{ playlist.cover_image }}'); background-size: cover; background-position: center;"{% endif %}>
+            {% if not playlist.cover_image %}
+            <span class="playlist-cover-chip">{{ playlist.name[:30] }}{% if playlist.name|length > 30 %}...{% endif %}</span>
+            {% endif %}
           </div>
           <div class="playlist-info">
-            <h2 class="playlist-name">Rooftop Neon</h2>
-            <p class="playlist-meta">warm • nostalgic • chillwave • 22 tracks</p>
+            <h2 class="playlist-name">{{ playlist.name }}</h2>
+            <p class="playlist-meta">{{ playlist.song_count }} track{{ 's' if playlist.song_count != 1 else '' }}</p>
           </div>
         </a>
-
-        <a class="playlist-card" href="#" style="--playlist-accent: #45caff;" aria-label="Open Morning Flow">
+          {% endfor %}
+        {% else %}
+        <div class="playlist-card playlist-card-empty" style="grid-column: 1 / -1; text-align: center;">
           <div class="playlist-cover">
-            <span class="playlist-cover-chip">Morning flow.png</span>
+            <span class="playlist-cover-chip">No playlists yet</span>
           </div>
           <div class="playlist-info">
-            <h2 class="playlist-name">Morning Flow</h2>
-            <p class="playlist-meta">soft light • slow coffee • 18 tracks</p>
+            <h2 class="playlist-name">Create Your First Playlist</h2>
+            <p class="playlist-meta">Click the + button above to upload an image and generate a playlist!</p>
           </div>
-        </a>
+        </div>
+        {% endif %}
 
-        <a class="playlist-card" href="#" style="--playlist-accent: #1db954;" aria-label="Open Forest Drift">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Forest path.heic</span>
-          </div>
-          <div class="playlist-info">
-            <h2 class="playlist-name">Forest Drift</h2>
-            <p class="playlist-meta">misty • organic • ambient • 27 tracks</p>
-          </div>
-        </a>
-
-        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a new playlist from photo">
+        <!-- Add new playlist card -->
+        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a new playlist from photo" id="new-playlist-card">
           <div class="playlist-cover">
             <span class="playlist-cover-chip">Drop a new photo</span>
           </div>
           <div class="playlist-info">
             <h2 class="playlist-name">New playlist</h2>
             <p class="playlist-meta">Turn your next picture into a mix.</p>
-          </div>
-        </a>
-
-        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a weekend playlist from photo">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Weekend plans.png</span>
-          </div>
-          <div class="playlist-info">
-            <h2 class="playlist-name">Weekend Mix</h2>
-            <p class="playlist-meta">Bright, high-energy tracks from your snapshots.</p>
-          </div>
-        </a>
-
-        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a late-night playlist from photo">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Late-night city.jpg</span>
-          </div>
-          <div class="playlist-info">
-            <h2 class="playlist-name">City Lights</h2>
-            <p class="playlist-meta">Dim, late-night sounds for neon photos.</p>
-          </div>
-        </a>
-
-        <a class="playlist-card" href="#" style="--playlist-accent: #1db954;" aria-label="Open Forest Drift">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Forest path.heic</span>
-          </div>
-          <div class="playlist-info">
-            <h2 class="playlist-name">Forest Drift</h2>
-            <p class="playlist-meta">misty • organic • ambient • 27 tracks</p>
-          </div>
-        </a>
-
-        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a new playlist from photo">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Drop a new photo</span>
-          </div>
-          <div class="playlist-info">
-            <h2 class="playlist-name">New playlist</h2>
-            <p class="playlist-meta">Turn your next picture into a mix.</p>
-          </div>
-        </a>
-
-        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a weekend playlist from photo">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Weekend plans.png</span>
-          </div>
-          <div class="playlist-info">
-            <h2 class="playlist-name">Weekend Mix</h2>
-            <p class="playlist-meta">Bright, high-energy tracks from your snapshots.</p>
-          </div>
-        </a>
-
-        <a class="playlist-card playlist-card-empty" href="#" aria-label="Create a late-night playlist from photo">
-          <div class="playlist-cover">
-            <span class="playlist-cover-chip">Late-night city.jpg</span>
-          </div>
-          <div class="playlist-info">
-            <h2 class="playlist-name">City Lights</h2>
-            <p class="playlist-meta">Dim, late-night sounds for neon photos.</p>
           </div>
         </a>
 
@@ -198,16 +135,22 @@
         setLoading(true);
         try {
           const data = await uploadImage(file);
-          if (grid) {
-            const card = createCard(data);
-            grid.prepend(card);
-          }
+          // Reload page to show updated playlist from database
+          window.location.reload();
         } catch (err) {
           alert(err.message || 'Could not create playlist.');
-        } finally {
           setLoading(false);
           fileInput.value = '';
         }
+      });
+    }
+
+    // Also allow clicking the "New playlist" card to upload
+    const newPlaylistCard = document.getElementById('new-playlist-card');
+    if (newPlaylistCard && fileInput) {
+      newPlaylistCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        fileInput.click();
       });
     }
   })();
