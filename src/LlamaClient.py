@@ -3,6 +3,22 @@ from config import OLLAMA_MODEL
 from ChromaClient import query_chroma
 import json
 
+def remove_duplicates(songs):
+    """
+    Remove duplicate songs from a list based on name and artists.
+    @param songs: List of song dictionaries with 'name' and 'artists' keys
+    @return: List of unique songs (first occurrence kept)
+    """
+    seen = set()
+    unique_songs = []
+    for song in songs:
+        # Create a unique identifier from name and artists
+        identifier = (song.get("name", ""), song.get("artists", ""))
+        if identifier not in seen:
+            seen.add(identifier)
+            unique_songs.append(song)
+    return unique_songs
+
 class LlamaClient:
     def __init__(self, model=OLLAMA_MODEL):
         self.model = model
@@ -78,7 +94,11 @@ class LlamaClient:
         playlist_values = self.generate_playlist_values(keywords)
         print("Playlist values:\n", playlist_values)
         chroma_query = query_chroma(playlist_values, 15)
-        format_query = json.dumps(chroma_query, indent=2)
+        
+
+        removed_duplicates = remove_duplicates(chroma_query)
+        print("Removed duplicates:\n", removed_duplicates)
+        format_query = json.dumps(removed_duplicates, indent=2)
         print("Chroma Query Results:\n", format_query)
 
         # Return the list of songs and keywords as a list
@@ -93,4 +113,4 @@ class LlamaClient:
         # Filter out any remaining empty strings
         keywords_list = [k for k in keywords_list if k]
 
-        return chroma_query, keywords_list[:3]
+        return removed_duplicates, keywords_list[:3]
